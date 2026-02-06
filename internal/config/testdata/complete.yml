@@ -1,0 +1,8 @@
+server:
+  address: http://localhost:8200
+
+auth_methods:
+  enabled: true
+
+secret_engines:
+  enabled: true
