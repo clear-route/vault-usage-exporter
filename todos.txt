@@ -1,0 +1,7 @@
+- add request duration metric
+- add request counter
+- add request errors counter
+- check if secret/engines are disabled, wether we still see the metrics
+    - if not do it per mounted engine and count the secrets/leases
+- add tokens counter
+- count secrets

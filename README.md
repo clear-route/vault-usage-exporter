@@ -19,7 +19,7 @@ It currently fetches (for every found namespace):
 - `vault_usage_secret_engine{name="<name>",namespace="<namespace>",path="<path>/",type="<type>"}`' Gauge
 
 ## Installation
-The `vault-usage-exporter` publishes binaries (see https://github.com/clear-route/vault-usage-exporter/releases) and [Docker images for `arm64` and `amd64`](https://github.com/orgs/clear-route/packages?repo_name=vault-usage-exporter).
+The `vault-usage-exporter` [publishes binaries/executables](https://github.com/clear-route/vault-usage-exporter/releases) and [Docker images for `arm64` and `amd64`](https://github.com/orgs/clear-route/packages?repo_name=vault-usage-exporter).
 
 ## Configuration
 All of [Vaults Environment Variables](https://developer.hashicorp.com/vault/docs/commands) are supported. You will at least need to provide `VAULT_ADDR` & `VAULT_TOKEN`
