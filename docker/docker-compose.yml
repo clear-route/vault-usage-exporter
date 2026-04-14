@@ -1,7 +1,10 @@
 services:
   vault-usage-exporter:
     depends_on:
-      - vault
+      vault:
+        condition: service_healthy
+      vault-config:
+        condition: service_completed_successfully
     environment:
       - VAULT_TOKEN=root
       - VAULT_ADDR=http://vault:8200
@@ -54,7 +57,7 @@ services:
       - ./grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
       - ./../assets/dashboard.json:/var/lib/grafana/dashboards/vault-usage-exporter.json
   vault:
-    image: hashicorp/vault
+    image: hashicorp/vault:1.21.4
     networks:
       vault-usage-exporter:
         aliases:
@@ -64,6 +67,32 @@ services:
     environment:
       - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
       - VAULT_DEV_ROOT_TOKEN_ID=root
+      - VAULT_ADDR=http://127.0.0.1:8200
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  vault-config:
+    image: hashicorp/vault:1.21.4
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=root
+    command:
+      - sh
+      - -ec
+      - |
+        vault write sys/internal/counters/config \
+          enabled=enable \
+          retention_months=12
+    networks:
+      vault-usage-exporter:
 
 networks:
   vault-usage-exporter:

@@ -1,8 +1,8 @@
+//go:build integration
+
 package testutils
 
 import (
-	"fmt"
-	"log"
 	"runtime"
 	"testing"
 
@@ -10,49 +10,41 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type VaultSuite struct {
+type vaultSuite struct {
 	suite.Suite
 
-	c      *TestContainer
-	client *vault.Client
+	container *TestContainer
+	client    *vault.Client
 }
 
-func (s *VaultSuite) TearDownSubTest() {
-	if err := s.c.Terminate(); err != nil {
-		log.Fatal(err)
-	}
+func (s *vaultSuite) TearDownSubTest() {
+	s.Require().NoError(s.container.Terminate())
 }
 
-func (s *VaultSuite) SetupSubTest() {
-	vc, err := StartTestContainer()
-	if err != nil {
-		log.Fatal(err)
-	}
+func (s *vaultSuite) SetupSubTest() {
+	container, err := StartTestContainer()
+	s.Require().NoError(err)
 
-	s.c = vc
+	client, err := vault.NewClientWithToken(container.URI, container.Token)
+	s.Require().NoError(err)
 
-	v, err := vault.NewClientWithToken(vc.URI, vc.Token)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s.client = v
+	s.container = container
+	s.client = client
 }
 
-func (s *VaultSuite) TestVaultConnection() {
-	s.Run("test", func() {
-		health, err := s.client.Client.Sys().Health()
+func (s *vaultSuite) TestVaultConnection() {
+	s.Run("health", func() {
+		health, err := s.client.Sys().Health()
 		s.Require().NoError(err)
-
-		fmt.Println(health)
 		s.Require().True(health.Initialized, "initialized")
 		s.Require().False(health.Sealed, "unsealed")
 	})
 }
 
 func TestVaultSuite(t *testing.T) {
-	// github actions doesn't offer the docker socket, which we need to run this test suite
-	if runtime.GOOS != "windows" {
-		suite.Run(t, new(VaultSuite))
+	if runtime.GOOS == "windows" {
+		t.Skip("docker-based integration tests are skipped on windows")
 	}
+
+	suite.Run(t, new(vaultSuite))
 }

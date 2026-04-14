@@ -7,11 +7,11 @@ import (
 )
 
 // LoggingMiddleware is a simple http logging middleware.
-func LoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		next(w, r)
+		next.ServeHTTP(w, r)
 
 		slog.Debug("received request",
 			slog.String("method", r.Method),

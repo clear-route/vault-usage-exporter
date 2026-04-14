@@ -2,7 +2,10 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 
@@ -11,7 +14,7 @@ import (
 
 // Client represents a vault struct used for reading and writing secrets.
 type Client struct {
-	Client *api.Client
+	apiClient *api.Client
 }
 
 // Engine represents a vault auth method or secret engine.
@@ -22,43 +25,81 @@ type Engine struct {
 	Namespace string
 }
 
+// ClientCounts models the client activity counters returned by Vault.
+type ClientCounts struct {
+	Clients          int `json:"clients"`
+	EntityClients    int `json:"entity_clients"`
+	NonEntityClients int `json:"non_entity_clients"`
+	SecretSyncs      int `json:"secret_syncs"`
+	ACMEClients      int `json:"acme_clients"`
+}
+
+// MonthlyActivityMount is the mount-level attribution from the monthly activity API.
+type MonthlyActivityMount struct {
+	MountPath string       `json:"mount_path"`
+	MountType string       `json:"mount_type"`
+	Counts    ClientCounts `json:"counts"`
+}
+
+// MonthlyActivityNamespace is the namespace-level attribution from the monthly activity API.
+type MonthlyActivityNamespace struct {
+	NamespaceID   string                 `json:"namespace_id"`
+	NamespacePath string                 `json:"namespace_path"`
+	Counts        ClientCounts           `json:"counts"`
+	Mounts        []MonthlyActivityMount `json:"mounts"`
+}
+
+// MonthlyActivityData is the subset of the partial-month activity response used by the exporter.
+type MonthlyActivityData struct {
+	ClientCounts
+	ByNamespace []MonthlyActivityNamespace `json:"by_namespace"`
+}
+
+type monthlyActivityResponse struct {
+	Data MonthlyActivityData `json:"data"`
+}
+
 // New returns a new vault client wrapper.
 func New() (*Client, error) {
 	addr, ok := os.LookupEnv("VAULT_ADDR")
 	if !ok {
-		return nil, fmt.Errorf("vault address not set in VAULT_ADDR environment variable")
+		return nil, fmt.Errorf("vault address not set in VAULT_ADDR")
 	}
 
 	cfg := api.DefaultConfig()
 	cfg.Address = addr
 
-	client, err := api.NewClient(cfg)
+	apiClient, err := api.NewClient(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("create vault client: %w", err)
 	}
 
-	return &Client{Client: client}, nil
+	return &Client{apiClient: apiClient}, nil
 }
 
 // NewClientWithToken returns a new vault client wrapper.
 func NewClientWithToken(addr, token string) (*Client, error) {
-	cfg := &api.Config{
-		Address: addr,
-	}
-
-	c, err := api.NewClient(cfg)
+	apiClient, err := api.NewClient(&api.Config{Address: addr})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create vault client: %w", err)
 	}
 
-	c.SetToken(token)
+	apiClient.SetToken(token)
 
-	return &Client{Client: c}, nil
+	return &Client{apiClient: apiClient}, nil
+}
+
+func (c *Client) Sys() *api.Sys {
+	return c.apiClient.Sys()
+}
+
+func (c *Client) Logical() *api.Logical {
+	return c.apiClient.Logical()
 }
 
 // ListNamespaces returns a list of namespaces in the vault. If namespaces are not supported, it returns an empty list.
 func (c *Client) ListNamespaces(ctx context.Context) ([]string, error) {
-	secret, err := c.Client.Logical().ListWithContext(ctx, "sys/namespaces")
+	secret, err := c.Logical().ListWithContext(ctx, "sys/namespaces")
 	if err != nil {
 		return nil, fmt.Errorf("error listing namespaces: %w", err)
 	}
@@ -92,12 +133,10 @@ func (c *Client) ListNamespaces(ctx context.Context) ([]string, error) {
 }
 
 func (c *Client) ListAuthMethods(ctx context.Context, namespace string) ([]Engine, error) {
-	if namespace != "" {
-		c.Client.SetNamespace(namespace)
-		defer c.Client.SetNamespace("")
-	}
+	restoreNamespace := c.setNamespace(namespace)
+	defer restoreNamespace()
 
-	mounts, err := c.Client.Sys().ListAuthWithContext(ctx)
+	mounts, err := c.Sys().ListAuthWithContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list auth methods: %w", err)
 	}
@@ -117,13 +156,39 @@ func (c *Client) ListAuthMethods(ctx context.Context, namespace string) ([]Engin
 	return out, nil
 }
 
-func (c *Client) ListSecretEngines(ctx context.Context, namespace string) ([]Engine, error) {
-	if namespace != "" {
-		c.Client.SetNamespace(namespace)
-		defer c.Client.SetNamespace("")
+// GetMonthlyActivity fetches the current-month activity snapshot from Vault.
+func (c *Client) GetMonthlyActivity(ctx context.Context) (*MonthlyActivityData, error) {
+	restoreNamespace := c.setNamespace("")
+	defer restoreNamespace()
+
+	resp, err := c.apiClient.Logical().ReadRawWithContext(ctx, "sys/internal/counters/activity/monthly")
+	if err != nil {
+		return nil, fmt.Errorf("get monthly activity: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
+		if readErr != nil {
+			return nil, fmt.Errorf("get monthly activity: unexpected status %d and failed to read body: %w", resp.StatusCode, readErr)
+		}
+
+		return nil, fmt.Errorf("get monthly activity: unexpected status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
-	mounts, err := c.Client.Sys().ListMountsWithContext(ctx)
+	var decoded monthlyActivityResponse
+	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
+		return nil, fmt.Errorf("decode monthly activity response: %w", err)
+	}
+
+	return &decoded.Data, nil
+}
+
+func (c *Client) ListSecretEngines(ctx context.Context, namespace string) ([]Engine, error) {
+	restoreNamespace := c.setNamespace(namespace)
+	defer restoreNamespace()
+
+	mounts, err := c.Sys().ListMountsWithContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list secret engines: %w", err)
 	}
@@ -143,65 +208,14 @@ func (c *Client) ListSecretEngines(ctx context.Context, namespace string) ([]Eng
 	return out, nil
 }
 
-func (c *Client) CountLeases(ctx context.Context, namespace string) (int, error) {
-	if namespace != "" {
-		c.Client.SetNamespace(namespace)
-		defer c.Client.SetNamespace("")
+func (c *Client) setNamespace(namespace string) func() {
+	if namespace == "" || namespace == "root" {
+		namespace = ""
 	}
 
-	visited := map[string]struct{}{}
-	queue := []string{""}
-	count := 0
+	c.apiClient.SetNamespace(namespace)
 
-	for len(queue) > 0 {
-		prefix := queue[0]
-		queue = queue[1:]
-
-		if _, ok := visited[prefix]; ok {
-			continue
-		}
-		visited[prefix] = struct{}{}
-
-		secret, err := c.Client.Logical().ListWithContext(ctx, "sys/leases/lookup/"+prefix)
-		if err != nil {
-			return 0, fmt.Errorf("list leases for prefix %q: %w", prefix, err)
-		}
-		if secret == nil || secret.Data == nil {
-			continue
-		}
-
-		keys, _ := secret.Data["keys"].([]interface{})
-		for _, k := range keys {
-			s, ok := k.(string)
-			if !ok {
-				continue
-			}
-			if strings.HasSuffix(s, "/") {
-				queue = append(queue, prefix+s)
-				continue
-			}
-			count++
-		}
+	return func() {
+		c.apiClient.SetNamespace("")
 	}
-
-	return count, nil
-}
-
-func (c *Client) CountTokens(ctx context.Context, namespace string) (int, error) {
-	if namespace != "" {
-		c.Client.SetNamespace(namespace)
-		defer c.Client.SetNamespace("")
-	}
-
-	secret, err := c.Client.Logical().ListWithContext(ctx, "auth/token/accessors")
-	if err != nil {
-		return 0, fmt.Errorf("list token accessors: %w", err)
-	}
-
-	if secret == nil || secret.Data == nil {
-		return 0, nil
-	}
-
-	keys, _ := secret.Data["keys"].([]interface{})
-	return len(keys), nil
 }

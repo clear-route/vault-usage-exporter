@@ -27,7 +27,8 @@ vault-load-gen: ## run vault-load-gen
   		-v ./scripts/load-gen:/opt/vault-benchmark/configs \
   		hashicorp/vault-benchmark:latest \
   		vault-benchmark run -config=/opt/vault-benchmark/configs/config.hcl
+	./scripts/load-gen/seed-billable-clients.sh
 
 .PHONY: docker
 docker: ## build docker image
-	cd docker && docker-compose up
+	cd docker && docker compose up --build --force-recreate

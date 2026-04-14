@@ -9,11 +9,10 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/vault"
 )
 
-var token = "root"
-
 var (
-	VaultVersionEnv = "VAULT_VERSION"
-	VaultVersion    = "1.20.0"
+	defaultToken        = "root"
+	defaultVaultVersion = "1.20.0"
+	vaultVersionEnv     = "VAULT_VERSION"
 )
 
 // TestContainer vault dev container wrapper.
@@ -26,13 +25,13 @@ type TestContainer struct {
 // StartTestContainer Starts a fresh vault in development mode.
 func StartTestContainer(commands ...string) (*TestContainer, error) {
 	ctx := context.Background()
-
-	if v, ok := os.LookupEnv(VaultVersionEnv); ok {
-		VaultVersion = v
+	version := defaultVaultVersion
+	if v, ok := os.LookupEnv(vaultVersionEnv); ok {
+		version = v
 	}
 
-	vaultContainer, err := vault.Run(ctx, "hashicorp/vault:"+VaultVersion,
-		vault.WithToken(token),
+	vaultContainer, err := vault.Run(ctx, "hashicorp/vault:"+version,
+		vault.WithToken(defaultToken),
 		vault.WithInitCommand(commands...),
 	)
 	if err != nil {
@@ -47,7 +46,7 @@ func StartTestContainer(commands ...string) (*TestContainer, error) {
 	return &TestContainer{
 		Container: vaultContainer,
 		URI:       uri,
-		Token:     token,
+		Token:     defaultToken,
 	}, nil
 }
 

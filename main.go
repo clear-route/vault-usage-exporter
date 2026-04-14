@@ -16,15 +16,18 @@ import (
 	customHTTP "github.com/clear-route/vault-usage-exporter/pkg/http"
 	"github.com/clear-route/vault-usage-exporter/pkg/vault"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var version string
 
+const shutdownTimeout = 3 * time.Second
+
 func main() {
 	port := flag.String("port", "9090", "address for metrics HTTP server")
 	address := flag.String("address", "0.0.0.0", "address for metrics HTTP server")
+	timeout := flag.Duration("timeout", 5*time.Second, "timeout for each Vault refresh request")
+	refreshInterval := flag.Duration("refresh-interval", 5*time.Minute, "interval between Vault refreshes")
 
 	flag.Parse()
 
@@ -46,7 +49,8 @@ func main() {
 
 	c, err := collector.New(
 		collector.WithContext(ctx),
-		collector.WithTimeout(5*time.Second),
+		collector.WithTimeout(*timeout),
+		collector.WithRefreshInterval(*refreshInterval),
 		collector.WithVaultClient(vaultClient),
 		collector.WithBuildInfo(version),
 	)
@@ -55,19 +59,16 @@ func main() {
 	}
 
 	reg := prometheus.NewRegistry()
-
-	reg.MustRegister(
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{Namespace: "vault_usage"}),
-		collectors.NewGoCollector(),
-		c,
-	)
+	reg.MustRegister(c)
 
 	mux := &http.ServeMux{}
 
-	mux.HandleFunc("/metrics", customHTTP.LoggingMiddleware(promhttp.HandlerFor(reg, promhttp.HandlerOpts{EnableOpenMetrics: false}).ServeHTTP))
-	healthHandler := customHTTP.LoggingMiddleware(customHTTP.HealthHandler())
-	mux.HandleFunc("/healthz", healthHandler)
-	mux.HandleFunc("/readyz", healthHandler)
+	mux.Handle("/metrics", customHTTP.LoggingMiddleware(
+		promhttp.HandlerFor(reg, promhttp.HandlerOpts{EnableOpenMetrics: false}),
+	))
+	healthHandler := customHTTP.LoggingMiddleware(http.HandlerFunc(customHTTP.Health))
+	mux.Handle("/healthz", healthHandler)
+	mux.Handle("/readyz", healthHandler)
 
 	server := &http.Server{
 		Addr:              *address + ":" + *port,
@@ -86,8 +87,7 @@ func main() {
 	<-ctx.Done()
 	slog.Info("received shutdown signal")
 
-	//nolint: mnd
-	shutdownCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(ctx, shutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
