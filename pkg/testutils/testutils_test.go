@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/clear-route/vault-usage-exporter/pkg/vault"
+	"github.com/clear-route/vault-client-count-exporter/pkg/vault"
 	"github.com/stretchr/testify/suite"
 )
 

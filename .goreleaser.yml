@@ -4,7 +4,7 @@ builds:
   -
     env:
       - CGO_ENABLED=0
-    binary: vault-usage-exporter
+    binary: vault-client-count-exporter
     ldflags:
       - -s -w
       - -X main.version={{ .Version }}
@@ -19,7 +19,7 @@ builds:
 archives:
   -
     builds:
-      - vault-usage-exporter
+      - vault-client-count-exporter
     format_overrides:
       - goos: windows
         format: zip
