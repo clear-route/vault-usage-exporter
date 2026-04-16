@@ -1,0 +1,929 @@
+{
+  "request_id": "26be5ab9-dcac-9237-ec12-269a8ca647d5",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "by_namespace": [
+      {
+        "namespace_id": "root",
+        "namespace_path": "",
+        "counts": {
+          "entity_clients": 20,
+          "non_entity_clients": 10,
+          "secret_syncs": 5,
+          "acme_clients": 3,
+          "clients": 38
+        },
+        "mounts": [
+          {
+            "mount_path": "auth/up1/",
+            "mount_type": "userpass/",
+            "counts": {
+              "entity_clients": 10,
+              "non_entity_clients": 10,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 20
+            }
+          },
+          {
+            "mount_path": "auth/up2/",
+            "mount_type": "userpass/",
+            "counts": {
+              "entity_clients": 5,
+              "non_entity_clients": 5,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 10
+            }
+          },
+          {
+            "mount_path": "secrets/kv1/",
+            "mount_type": "kv/",
+            "counts": {
+              "entity_clients": 0,
+              "non_entity_clients": 0,
+              "secret_syncs": 3,
+              "acme_clients": 0,
+              "clients": 3
+            }
+          },
+          {
+            "mount_path": "secrets/kv2/",
+            "mount_type": "kv/",
+            "counts": {
+              "entity_clients": 0,
+              "non_entity_clients": 0,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 2
+            }
+          },
+          {
+            "mount_path": "secrets/pki/",
+            "mount_type": "pki/",
+            "counts": {
+              "entity_clients": 0,
+              "non_entity_clients": 0,
+              "secret_syncs": 0,
+              "acme_clients": 3,
+              "clients": 3
+            }
+          }
+        ]
+      },
+      {
+        "namespace_id": "s07UR",
+        "namespace_path": "ns1/",
+        "counts": {
+          "entity_clients": 5,
+          "non_entity_clients": 5,
+          "secret_syncs": 0,
+          "acme_clients": 0,
+          "clients": 10
+        },
+        "mounts": [
+          {
+            "mount_path": "auth/up1/",
+            "mount_type": "userpass/",
+            "counts": {
+              "entity_clients": 0,
+              "non_entity_clients": 5,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 5
+            }
+          },
+          {
+            "mount_path": "auth/up2/",
+            "mount_type": "userpass/",
+            "counts": {
+              "entity_clients": 5,
+              "non_entity_clients": 0,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 5
+            }
+          }
+        ]
+      },
+      {
+        "namespace_id": "t91PL",
+        "namespace_path": "platform/",
+        "counts": {
+          "entity_clients": 8,
+          "non_entity_clients": 4,
+          "secret_syncs": 1,
+          "acme_clients": 0,
+          "clients": 13
+        },
+        "mounts": [
+          {
+            "mount_path": "auth/oidc/",
+            "mount_type": "oidc/",
+            "counts": {
+              "entity_clients": 8,
+              "non_entity_clients": 0,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 8
+            }
+          },
+          {
+            "mount_path": "secrets/kv-apps/",
+            "mount_type": "kv/",
+            "counts": {
+              "entity_clients": 0,
+              "non_entity_clients": 4,
+              "secret_syncs": 1,
+              "acme_clients": 0,
+              "clients": 5
+            }
+          }
+        ]
+      },
+      {
+        "namespace_id": "u44QX",
+        "namespace_path": "payments/eu/",
+        "counts": {
+          "entity_clients": 6,
+          "non_entity_clients": 2,
+          "secret_syncs": 2,
+          "acme_clients": 1,
+          "clients": 11
+        },
+        "mounts": [
+          {
+            "mount_path": "auth/kubernetes/",
+            "mount_type": "kubernetes/",
+            "counts": {
+              "entity_clients": 6,
+              "non_entity_clients": 0,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 6
+            }
+          },
+          {
+            "mount_path": "secrets/kv-payments/",
+            "mount_type": "kv/",
+            "counts": {
+              "entity_clients": 0,
+              "non_entity_clients": 2,
+              "secret_syncs": 2,
+              "acme_clients": 0,
+              "clients": 4
+            }
+          },
+          {
+            "mount_path": "pki/issuers/",
+            "mount_type": "pki/",
+            "counts": {
+              "entity_clients": 0,
+              "non_entity_clients": 0,
+              "secret_syncs": 0,
+              "acme_clients": 1,
+              "clients": 1
+            }
+          }
+        ]
+      }
+    ],
+    "end_time": "2021-05-31T23:59:59Z",
+    "months": [
+      {
+        "timestamp": "2021-05-01T00:00:00Z",
+        "counts": {
+          "entity_clients": 34,
+          "non_entity_clients": 16,
+          "secret_syncs": 8,
+          "acme_clients": 4,
+          "clients": 62
+        },
+        "namespaces": [
+          {
+            "namespace_id": "root",
+            "namespace_path": "",
+            "counts": {
+              "entity_clients": 15,
+              "non_entity_clients": 5,
+              "secret_syncs": 5,
+              "acme_clients": 3,
+              "clients": 23
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/up2/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 10,
+                  "non_entity_clients": 5,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 15
+                }
+              },
+              {
+                "mount_path": "auth/up1/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 3,
+                  "non_entity_clients": 2,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              },
+              {
+                "mount_path": "secrets/kv1/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 3,
+                  "acme_clients": 0,
+                  "clients": 3
+                }
+              },
+              {
+                "mount_path": "secrets/kv2/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 2,
+                  "acme_clients": 0,
+                  "clients": 2
+                }
+              },
+              {
+                "mount_path": "secrets/pki/",
+                "mount_type": "pki/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 3,
+                  "clients": 3
+                }
+              }
+            ]
+          },
+          {
+            "namespace_id": "s07UR",
+            "namespace_path": "ns1/",
+            "counts": {
+              "entity_clients": 5,
+              "non_entity_clients": 5,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 10
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/up1/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 5,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              },
+              {
+                "mount_path": "auth/up2/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 5,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              }
+            ]
+          },
+          {
+            "namespace_id": "t91PL",
+            "namespace_path": "platform/",
+            "counts": {
+              "entity_clients": 8,
+              "non_entity_clients": 4,
+              "secret_syncs": 1,
+              "acme_clients": 0,
+              "clients": 13
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/oidc/",
+                "mount_type": "oidc/",
+                "counts": {
+                  "entity_clients": 8,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 8
+                }
+              },
+              {
+                "mount_path": "secrets/kv-apps/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 4,
+                  "secret_syncs": 1,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              }
+            ]
+          },
+          {
+            "namespace_id": "u44QX",
+            "namespace_path": "payments/eu/",
+            "counts": {
+              "entity_clients": 6,
+              "non_entity_clients": 2,
+              "secret_syncs": 2,
+              "acme_clients": 1,
+              "clients": 11
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/kubernetes/",
+                "mount_type": "kubernetes/",
+                "counts": {
+                  "entity_clients": 6,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 6
+                }
+              },
+              {
+                "mount_path": "secrets/kv-payments/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 2,
+                  "secret_syncs": 2,
+                  "acme_clients": 0,
+                  "clients": 4
+                }
+              },
+              {
+                "mount_path": "pki/issuers/",
+                "mount_type": "pki/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 1,
+                  "clients": 1
+                }
+              }
+            ]
+          }
+        ],
+        "new_clients": {
+          "counts": {
+            "entity_clients": 10,
+            "non_entity_clients": 10,
+            "secret_syncs": 2,
+            "acme_clients": 1,
+            "clients": 23
+          },
+          "namespaces": [
+            {
+              "namespace_id": "root",
+              "namespace_path": "",
+              "counts": {
+                "entity_clients": 5,
+                "non_entity_clients": 5,
+                "secret_syncs": 2,
+                "acme_clients": 1,
+                "clients": 13
+              },
+              "mounts": [
+                {
+                  "mount_path": "auth/up2/",
+                  "mount_type": "userpass/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 5,
+                    "clients": 5
+                  }
+                },
+                {
+                  "mount_path": "auth/up1/",
+                  "mount_type": "userpass/",
+                  "counts": {
+                    "entity_clients": 5,
+                    "non_entity_clients": 0,
+                    "clients": 5
+                  }
+                },
+                {
+                  "mount_path": "secrets/kv1/",
+                  "mount_type": "kv/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 0,
+                    "secret_syncs": 1,
+                    "clients": 1
+                  }
+                },
+                {
+                  "mount_path": "secrets/kv2/",
+                  "mount_type": "kv/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 0,
+                    "secret_syncs": 1,
+                    "clients": 1
+                  }
+                },
+                {
+                  "mount_path": "secrets/pki/",
+                  "mount_type": "pki/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 0,
+                    "secret_syncs": 0,
+                    "acme_clients": 1,
+                    "clients": 1
+                  }
+                }
+              ]
+            },
+            {
+              "namespace_id": "s07UR",
+              "namespace_path": "ns1/",
+              "counts": {
+                "entity_clients": 5,
+                "non_entity_clients": 5,
+                "secret_syncs": 0,
+                "acme_clients": 0,
+                "clients": 10
+              },
+              "mounts": [
+                {
+                  "mount_path": "auth/up1/",
+                  "mount_type": "userpass/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 5,
+                    "secret_syncs": 0,
+                    "acme_clients": 0,
+                    "clients": 5
+                  }
+                },
+                {
+                  "mount_path": "auth/up2/",
+                  "mount_type": "userpass/",
+                  "counts": {
+                    "entity_clients": 5,
+                    "non_entity_clients": 0,
+                    "secret_syncs": 0,
+                    "acme_clients": 0,
+                    "clients": 5
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "timestamp": "2021-04-01T00:00:00Z",
+        "counts": {
+          "entity_clients": 5,
+          "non_entity_clients": 5,
+          "secret_syncs": 3,
+          "acme_clients": 1,
+          "clients": 14
+        },
+        "namespaces": [
+          {
+            "namespace_id": "root",
+            "namespace_path": "",
+            "counts": {
+              "entity_clients": 5,
+              "non_entity_clients": 5,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 10
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/up1/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 5,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              },
+              {
+                "mount_path": "auth/up2/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 5,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              }
+            ]
+          }
+        ],
+        "new_clients": {
+          "counts": {
+            "entity_clients": 5,
+            "non_entity_clients": 5,
+            "secret_syncs": 3,
+            "acme_clients": 1,
+            "clients": 14
+          },
+          "namespaces": [
+            {
+              "namespace_id": "root",
+              "namespace_path": "",
+              "counts": {
+                "entity_clients": 5,
+                "non_entity_clients": 5,
+                "secret_syncs": 3,
+                "acme_clients": 1,
+                "clients": 14
+              },
+              "mounts": [
+                {
+                  "mount_path": "auth/up1/",
+                  "mount_type": "userpass/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 5,
+                    "secret_syncs": 0,
+                    "acme_clients": 0,
+                    "clients": 5
+                  }
+                },
+                {
+                  "mount_path": "auth/up2/",
+                  "mount_type": "userpass/",
+                  "counts": {
+                    "entity_clients": 5,
+                    "non_entity_clients": 0,
+                    "secret_syncs": 0,
+                    "acme_clients": 0,
+                    "clients": 5
+                  }
+                },
+                {
+                  "mount_path": "secrets/kv1/",
+                  "mount_type": "kv/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 0,
+                    "secret_syncs": 2,
+                    "acme_clients": 0,
+                    "clients": 2
+                  }
+                },
+                {
+                  "mount_path": "secrets/kv2/",
+                  "mount_type": "kv/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 0,
+                    "secret_syncs": 1,
+                    "acme_clients": 0,
+                    "clients": 1
+                  }
+                },
+                {
+                  "mount_path": "secrets/pki/",
+                  "mount_type": "pki/",
+                  "counts": {
+                    "entity_clients": 0,
+                    "non_entity_clients": 0,
+                    "secret_syncs": 0,
+                    "acme_clients": 1,
+                    "clients": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "timestamp": "2021-03-01T00:00:00Z",
+        "counts": {
+          "entity_clients": 15,
+          "non_entity_clients": 10,
+          "secret_syncs": 4,
+          "acme_clients": 1,
+          "clients": 30
+        },
+        "namespaces": [
+          {
+            "namespace_id": "root",
+            "namespace_path": "",
+            "counts": {
+              "entity_clients": 8,
+              "non_entity_clients": 5,
+              "secret_syncs": 2,
+              "acme_clients": 1,
+              "clients": 16
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/up1/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 3,
+                  "non_entity_clients": 2,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              },
+              {
+                "mount_path": "auth/up2/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 5,
+                  "non_entity_clients": 3,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 8
+                }
+              },
+              {
+                "mount_path": "secrets/kv1/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 1,
+                  "acme_clients": 0,
+                  "clients": 1
+                }
+              },
+              {
+                "mount_path": "pki/issuers/",
+                "mount_type": "pki/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 1,
+                  "clients": 1
+                }
+              }
+            ]
+          },
+          {
+            "namespace_id": "s07UR",
+            "namespace_path": "ns1/",
+            "counts": {
+              "entity_clients": 4,
+              "non_entity_clients": 3,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 7
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/up1/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 2,
+                  "non_entity_clients": 3,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              },
+              {
+                "mount_path": "auth/up2/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 2,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 2
+                }
+              }
+            ]
+          },
+          {
+            "namespace_id": "t91PL",
+            "namespace_path": "platform/",
+            "counts": {
+              "entity_clients": 3,
+              "non_entity_clients": 2,
+              "secret_syncs": 1,
+              "acme_clients": 0,
+              "clients": 6
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/oidc/",
+                "mount_type": "oidc/",
+                "counts": {
+                  "entity_clients": 3,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 3
+                }
+              },
+              {
+                "mount_path": "secrets/kv-apps/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 2,
+                  "secret_syncs": 1,
+                  "acme_clients": 0,
+                  "clients": 3
+                }
+              }
+            ]
+          },
+          {
+            "namespace_id": "u44QX",
+            "namespace_path": "payments/eu/",
+            "counts": {
+              "entity_clients": 0,
+              "non_entity_clients": 0,
+              "secret_syncs": 1,
+              "acme_clients": 0,
+              "clients": 1
+            },
+            "mounts": [
+              {
+                "mount_path": "secrets/kv-payments/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 1,
+                  "acme_clients": 0,
+                  "clients": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "timestamp": "2021-02-01T00:00:00Z",
+        "counts": {
+          "entity_clients": 9,
+          "non_entity_clients": 6,
+          "secret_syncs": 2,
+          "acme_clients": 0,
+          "clients": 17
+        },
+        "namespaces": [
+          {
+            "namespace_id": "root",
+            "namespace_path": "",
+            "counts": {
+              "entity_clients": 5,
+              "non_entity_clients": 4,
+              "secret_syncs": 1,
+              "acme_clients": 0,
+              "clients": 10
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/up1/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 2,
+                  "non_entity_clients": 2,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 4
+                }
+              },
+              {
+                "mount_path": "auth/up2/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 3,
+                  "non_entity_clients": 2,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 5
+                }
+              },
+              {
+                "mount_path": "secrets/kv1/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 1,
+                  "acme_clients": 0,
+                  "clients": 1
+                }
+              }
+            ]
+          },
+          {
+            "namespace_id": "s07UR",
+            "namespace_path": "ns1/",
+            "counts": {
+              "entity_clients": 2,
+              "non_entity_clients": 2,
+              "secret_syncs": 0,
+              "acme_clients": 0,
+              "clients": 4
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/up1/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 1,
+                  "non_entity_clients": 2,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 3
+                }
+              },
+              {
+                "mount_path": "auth/up2/",
+                "mount_type": "userpass/",
+                "counts": {
+                  "entity_clients": 1,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 1
+                }
+              }
+            ]
+          },
+          {
+            "namespace_id": "t91PL",
+            "namespace_path": "platform/",
+            "counts": {
+              "entity_clients": 2,
+              "non_entity_clients": 0,
+              "secret_syncs": 1,
+              "acme_clients": 0,
+              "clients": 3
+            },
+            "mounts": [
+              {
+                "mount_path": "auth/oidc/",
+                "mount_type": "oidc/",
+                "counts": {
+                  "entity_clients": 2,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 0,
+                  "acme_clients": 0,
+                  "clients": 2
+                }
+              },
+              {
+                "mount_path": "secrets/kv-apps/",
+                "mount_type": "kv/",
+                "counts": {
+                  "entity_clients": 0,
+                  "non_entity_clients": 0,
+                  "secret_syncs": 1,
+                  "acme_clients": 0,
+                  "clients": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "start_time": "2021-01-01T00:00:00Z",
+    "total": {
+      "entity_clients": 20,
+      "non_entity_clients": 20,
+      "secret_syncs": 5,
+      "acme_clients": 3,
+      "clients": 48
+    }
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}

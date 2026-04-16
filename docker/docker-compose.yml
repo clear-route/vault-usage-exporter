@@ -1,13 +1,15 @@
 services:
-  vault-usage-exporter:
+  vault-client-count-exporter:
     depends_on:
       vault:
         condition: service_healthy
       vault-config:
         condition: service_completed_successfully
+    # command: ["-monthly"]
     environment:
       - VAULT_TOKEN=root
       - VAULT_ADDR=http://vault:8200
+      - VAULT_MONTHLY_ACTIVITY_FILE=/assets/sample.json
     build:
       context: ./..
       dockerfile: Dockerfile
@@ -21,16 +23,18 @@ services:
       start_period: 5s
     ports:
       - "8090:9090/tcp"
+    volumes:
+      - ./../assets/sample.json:/assets/sample.json:ro
     networks:
-      vault-usage-exporter:
+      vault-client-count-exporter:
         aliases:
-          - vault-usage-exporter
+          - vault-client-count-exporter
   prometheus:
     image: prom/prometheus
     depends_on:
-      - vault-usage-exporter
+      - vault-client-count-exporter
     networks:
-      vault-usage-exporter:
+      vault-client-count-exporter:
         aliases:
           - prometheus
     ports:
@@ -44,7 +48,7 @@ services:
   grafana:
     image: grafana/grafana
     networks:
-      vault-usage-exporter:
+      vault-client-count-exporter:
         aliases:
           - grafana
     ports:
@@ -55,11 +59,11 @@ services:
     volumes:
       - ./grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
       - ./grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
-      - ./../assets/dashboard.json:/var/lib/grafana/dashboards/vault-usage-exporter.json
+      - ./../assets/dashboard.json:/var/lib/grafana/dashboards/vault-client-count-exporter.json
   vault:
     image: hashicorp/vault:1.21.4
     networks:
-      vault-usage-exporter:
+      vault-client-count-exporter:
         aliases:
           - vault
     ports:
@@ -92,10 +96,10 @@ services:
           enabled=enable \
           retention_months=12
     networks:
-      vault-usage-exporter:
+      vault-client-count-exporter:
 
 networks:
-  vault-usage-exporter:
+  vault-client-count-exporter:
     driver: bridge
 
 volumes:

@@ -6,55 +6,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clear-route/vault-usage-exporter/pkg/vault"
+	"github.com/clear-route/vault-client-count-exporter/pkg/vault"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 )
 
 type fakeVaultClient struct {
-	namespaces []string
-	auth       map[string][]vault.Engine
-	engines    map[string][]vault.Engine
-	activity   *vault.MonthlyActivityData
+	activity *vault.MonthlyActivityData
+	err      error
 
-	err error
-
-	listNamespacesCalls int
-	listAuthCalls       int
-	listSecretCalls     int
-	getActivityCalls    int
+	getActivityCalls int
+	lastQuery        vault.ActivityQuery
 }
 
-func (f *fakeVaultClient) ListNamespaces(context.Context) ([]string, error) {
-	f.listNamespacesCalls++
-	if f.err != nil {
-		return nil, f.err
-	}
-
-	return append([]string(nil), f.namespaces...), nil
-}
-
-func (f *fakeVaultClient) ListAuthMethods(_ context.Context, namespace string) ([]vault.Engine, error) {
-	f.listAuthCalls++
-	if f.err != nil {
-		return nil, f.err
-	}
-
-	return append([]vault.Engine(nil), f.auth[namespace]...), nil
-}
-
-func (f *fakeVaultClient) ListSecretEngines(_ context.Context, namespace string) ([]vault.Engine, error) {
-	f.listSecretCalls++
-	if f.err != nil {
-		return nil, f.err
-	}
-
-	return append([]vault.Engine(nil), f.engines[namespace]...), nil
-}
-
-func (f *fakeVaultClient) GetMonthlyActivity(context.Context) (*vault.MonthlyActivityData, error) {
+func (f *fakeVaultClient) GetActivity(_ context.Context, query vault.ActivityQuery) (*vault.MonthlyActivityData, error) {
 	f.getActivityCalls++
+	f.lastQuery = query
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -65,61 +33,42 @@ func (f *fakeVaultClient) GetMonthlyActivity(context.Context) (*vault.MonthlyAct
 
 	copyValue := *f.activity
 	copyValue.ByNamespace = append([]vault.MonthlyActivityNamespace(nil), f.activity.ByNamespace...)
+	copyValue.Months = append([]vault.MonthlyActivityMonth(nil), f.activity.Months...)
 
 	return &copyValue, nil
 }
 
-func TestCollectUsesCachedSnapshotAndEmitsNamespaceAndMountMetrics(t *testing.T) {
+func TestCollectUsesCachedSnapshotAndEmitsMonthlyMetrics(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	client := &fakeVaultClient{
-		namespaces: []string{"team-a"},
-		auth: map[string][]vault.Engine{
-			"root": {
-				{Name: "token", Type: "token", Path: "token/", Namespace: "root"},
-			},
-			"team-a": {
-				{Name: "userpass", Type: "userpass", Path: "userpass/", Namespace: "team-a"},
-			},
-		},
-		engines: map[string][]vault.Engine{
-			"root": {
-				{Name: "sys", Type: "system", Path: "sys/", Namespace: "root"},
-			},
-			"team-a": {
-				{Name: "kv", Type: "kv", Path: "kv/", Namespace: "team-a"},
-			},
-		},
 		activity: &vault.MonthlyActivityData{
-			ClientCounts: vault.ClientCounts{
-				Clients:          11,
-				EntityClients:    7,
-				NonEntityClients: 2,
-				SecretSyncs:      1,
-				ACMEClients:      1,
-			},
+			StartTime: time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndTime:   time.Date(2026, time.March, 31, 23, 59, 59, 0, time.UTC),
 			ByNamespace: []vault.MonthlyActivityNamespace{
 				{
 					NamespaceID:   "root",
 					NamespacePath: "",
 					Counts: vault.ClientCounts{
-						Clients:          5,
-						EntityClients:    3,
-						NonEntityClients: 1,
+						Clients:          13,
+						EntityClients:    9,
+						NonEntityClients: 2,
 						SecretSyncs:      1,
+						ACMEClients:      1,
 					},
 					Mounts: []vault.MonthlyActivityMount{
 						{
 							MountPath: "auth/token/",
 							MountType: "token/",
 							Counts: vault.ClientCounts{
-								Clients:          5,
-								EntityClients:    3,
-								NonEntityClients: 1,
+								Clients:          13,
+								EntityClients:    9,
+								NonEntityClients: 2,
 								SecretSyncs:      1,
+								ACMEClients:      1,
 							},
 						},
 					},
@@ -128,20 +77,80 @@ func TestCollectUsesCachedSnapshotAndEmitsNamespaceAndMountMetrics(t *testing.T)
 					NamespaceID:   "ns-1",
 					NamespacePath: "team-a/",
 					Counts: vault.ClientCounts{
-						Clients:          6,
-						EntityClients:    4,
+						Clients:          8,
+						EntityClients:    5,
 						NonEntityClients: 1,
+						SecretSyncs:      1,
 						ACMEClients:      1,
 					},
 					Mounts: []vault.MonthlyActivityMount{
 						{
-							MountPath: "kv/",
-							MountType: "kv/",
+							MountPath: "auth/approle/",
+							MountType: "approle/",
+							Counts: vault.ClientCounts{
+								Clients:          8,
+								EntityClients:    5,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+					},
+				},
+			},
+			Months: []vault.MonthlyActivityMonth{
+				{
+					Timestamp: time.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC),
+					Counts: vault.ClientCounts{
+						Clients:          11,
+						EntityClients:    7,
+						NonEntityClients: 2,
+						SecretSyncs:      1,
+						ACMEClients:      1,
+					},
+					Namespaces: []vault.MonthlyActivityNamespace{
+						{
+							NamespaceID:   "root",
+							NamespacePath: "",
+							Counts: vault.ClientCounts{
+								Clients:          5,
+								EntityClients:    3,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+							},
+							Mounts: []vault.MonthlyActivityMount{
+								{
+									MountPath: "auth/token/",
+									MountType: "token/",
+									Counts: vault.ClientCounts{
+										Clients:          5,
+										EntityClients:    3,
+										NonEntityClients: 1,
+										SecretSyncs:      1,
+									},
+								},
+							},
+						},
+						{
+							NamespaceID:   "ns-1",
+							NamespacePath: "team-a/",
 							Counts: vault.ClientCounts{
 								Clients:          6,
 								EntityClients:    4,
 								NonEntityClients: 1,
 								ACMEClients:      1,
+							},
+							Mounts: []vault.MonthlyActivityMount{
+								{
+									MountPath: "deleted mount; accessor \"auth_approle_deadbeef\"",
+									MountType: "deleted mount",
+									Counts: vault.ClientCounts{
+										Clients:          6,
+										EntityClients:    4,
+										NonEntityClients: 1,
+										ACMEClients:      1,
+									},
+								},
 							},
 						},
 					},
@@ -156,62 +165,108 @@ func TestCollectUsesCachedSnapshotAndEmitsNamespaceAndMountMetrics(t *testing.T)
 		WithRefreshInterval(time.Hour),
 		WithBuildInfo("test-version"),
 		WithVaultClient(client),
+		WithActivityQuery(vault.ActivityQuery{
+			StartTime: "2026-01-01T00:00:00Z",
+			EndTime:   "2026-03-31T23:59:59Z",
+			Monthly:   true,
+		}),
 	)
 	require.NoError(t, err)
 
-	initialCalls := []int{
-		client.listNamespacesCalls,
-		client.listAuthCalls,
-		client.listSecretCalls,
-		client.getActivityCalls,
-	}
-
+	initialCalls := client.getActivityCalls
 	families := gatherMetricFamilies(t, c)
+	require.Equal(t, initialCalls, client.getActivityCalls, "Collect should only read cached state")
+	require.Equal(t, vault.ActivityQuery{
+		StartTime: "2026-01-01T00:00:00Z",
+		EndTime:   "2026-03-31T23:59:59Z",
+		Monthly:   true,
+	}, client.lastQuery)
 
-	require.Equal(t, initialCalls, []int{
-		client.listNamespacesCalls,
-		client.listAuthCalls,
-		client.listSecretCalls,
-		client.getActivityCalls,
-	}, "Collect should only read cached state")
-
-	requireMetricValue(t, families, "vault_usage_refresh_success", nil, 1)
-	requireMetricValue(t, families, "vault_usage_namespace_clients", map[string]string{
+	requireMetricValue(t, families, "vault_client_count_refresh_success", nil, 1)
+	requireMetricValue(t, families, "vault_client_count_activity_period_info", map[string]string{
+		"start_time": "2026-01-01T00:00:00Z",
+		"end_time":   "2026-03-31T23:59:59Z",
+	}, 1)
+	requireMetricAbsent(t, families, "vault_client_count_monthly_clients", map[string]string{
+		"start_time":  "2026-01-01T00:00:00Z",
+		"end_time":    "2026-03-31T23:59:59Z",
+		"month":       "2026-03",
+		"client_type": "clients",
+	})
+	requireMetricValue(t, families, "vault_client_count_monthly_clients", map[string]string{
+		"start_time":  "2026-01-01T00:00:00Z",
+		"end_time":    "2026-03-31T23:59:59Z",
+		"month":       "2026-03",
+		"client_type": "acme_clients",
+	}, 1)
+	requireMetricValue(t, families, "vault_client_count_monthly_namespace_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-03-31T23:59:59Z",
+		"month":          "2026-03",
 		"namespace":      "root",
 		"namespace_id":   "root",
 		"namespace_path": "",
-		"client_type":    "clients",
-	}, 5)
-	requireMetricValue(t, families, "vault_usage_namespace_clients", map[string]string{
+		"client_type":    "entity_clients",
+	}, 3)
+	requireMetricValue(t, families, "vault_client_count_monthly_namespace_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-03-31T23:59:59Z",
+		"month":          "2026-03",
 		"namespace":      "team-a",
 		"namespace_id":   "ns-1",
 		"namespace_path": "team-a/",
 		"client_type":    "acme_clients",
 	}, 1)
-	requireMetricValue(t, families, "vault_usage_mount_clients", map[string]string{
+	requireMetricAbsent(t, families, "vault_client_count_monthly_mount_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-03-31T23:59:59Z",
+		"month":          "2026-03",
 		"namespace":      "team-a",
 		"namespace_id":   "ns-1",
 		"namespace_path": "team-a/",
-		"mount_path":     "kv/",
-		"mount_type":     "kv",
+		"mount_path":     "deleted mount; accessor \"auth_approle_deadbeef\"",
+		"mount_type":     "deleted mount",
 		"client_type":    "clients",
-	}, 6)
-	requireMetricValue(t, families, "vault_usage_namespaces", map[string]string{"name": "root"}, 1)
-	requireMetricValue(t, families, "vault_usage_namespaces", map[string]string{"name": "team-a"}, 1)
-	requireMetricValue(t, families, "vault_usage_auth_method", map[string]string{
-		"name":      "userpass",
-		"type":      "userpass",
-		"path":      "userpass/",
-		"namespace": "team-a",
+	})
+	requireMetricValue(t, families, "vault_client_count_current_namespace_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-03-31T23:59:59Z",
+		"namespace":      "root",
+		"namespace_id":   "root",
+		"namespace_path": "",
+		"client_type":    "entity_clients",
+	}, 9)
+	requireMetricValue(t, families, "vault_client_count_current_namespace_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-03-31T23:59:59Z",
+		"namespace":      "team-a",
+		"namespace_id":   "ns-1",
+		"namespace_path": "team-a/",
+		"client_type":    "acme_clients",
 	}, 1)
-	requireMetricValue(t, families, "vault_usage_secret_engine", map[string]string{
-		"name":      "kv",
-		"type":      "kv",
-		"path":      "kv/",
-		"namespace": "team-a",
+	requireMetricValue(t, families, "vault_client_count_current_mount_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-03-31T23:59:59Z",
+		"namespace":      "team-a",
+		"namespace_id":   "ns-1",
+		"namespace_path": "team-a/",
+		"mount_path":     "auth/approle/",
+		"mount_type":     "approle",
+		"client_type":    "secret_syncs",
 	}, 1)
-	require.Nil(t, metricFamilyByName(families, "vault_usage_months"))
-	require.Nil(t, metricFamilyByName(families, "vault_usage_new_clients"))
+	requireMetricAbsent(t, families, "vault_client_count_current_mount_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-03-31T23:59:59Z",
+		"namespace":      "team-a",
+		"namespace_id":   "ns-1",
+		"namespace_path": "team-a/",
+		"mount_path":     "auth/approle/",
+		"mount_type":     "approle",
+		"client_type":    "clients",
+	})
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_namespaces"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_auth_method"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_secret_engine"))
 }
 
 func TestFailedRefreshKeepsPreviousSnapshotAndMarksStatusFailed(t *testing.T) {
@@ -222,11 +277,29 @@ func TestFailedRefreshKeepsPreviousSnapshotAndMarksStatusFailed(t *testing.T) {
 
 	client := &fakeVaultClient{
 		activity: &vault.MonthlyActivityData{
+			StartTime: time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndTime:   time.Date(2026, time.April, 30, 23, 59, 59, 0, time.UTC),
 			ByNamespace: []vault.MonthlyActivityNamespace{
 				{
 					NamespaceID:   "root",
 					NamespacePath: "",
-					Counts:        vault.ClientCounts{Clients: 4},
+					Counts: vault.ClientCounts{
+						Clients:       4,
+						EntityClients: 4,
+					},
+				},
+			},
+			Months: []vault.MonthlyActivityMonth{
+				{
+					Timestamp: time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC),
+					Counts:    vault.ClientCounts{Clients: 4},
+					Namespaces: []vault.MonthlyActivityNamespace{
+						{
+							NamespaceID:   "root",
+							NamespacePath: "",
+							Counts:        vault.ClientCounts{Clients: 4},
+						},
+					},
 				},
 			},
 		},
@@ -244,13 +317,33 @@ func TestFailedRefreshKeepsPreviousSnapshotAndMarksStatusFailed(t *testing.T) {
 	c.refresh(ctx)
 
 	families := gatherMetricFamilies(t, c)
-
-	requireMetricValue(t, families, "vault_usage_refresh_success", nil, 0)
-	requireMetricValue(t, families, "vault_usage_namespace_clients", map[string]string{
+	requireMetricValue(t, families, "vault_client_count_refresh_success", nil, 0)
+	requireMetricValue(t, families, "vault_client_count_activity_period_info", map[string]string{
+		"start_time": "2026-01-01T00:00:00Z",
+		"end_time":   "2026-04-30T23:59:59Z",
+	}, 1)
+	requireMetricAbsent(t, families, "vault_client_count_monthly_clients", map[string]string{
+		"start_time":  "2026-01-01T00:00:00Z",
+		"end_time":    "2026-04-30T23:59:59Z",
+		"month":       "2026-04",
+		"client_type": "clients",
+	})
+	requireMetricAbsent(t, families, "vault_client_count_monthly_namespace_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-04-30T23:59:59Z",
+		"month":          "2026-04",
 		"namespace":      "root",
 		"namespace_id":   "root",
 		"namespace_path": "",
 		"client_type":    "clients",
+	})
+	requireMetricValue(t, families, "vault_client_count_current_namespace_clients", map[string]string{
+		"start_time":     "2026-01-01T00:00:00Z",
+		"end_time":       "2026-04-30T23:59:59Z",
+		"namespace":      "root",
+		"namespace_id":   "root",
+		"namespace_path": "",
+		"client_type":    "entity_clients",
 	}, 4)
 }
 
@@ -273,15 +366,70 @@ func TestNoSuccessfulRefreshEmitsOnlyOperationalMetrics(t *testing.T) {
 
 	families := gatherMetricFamilies(t, c)
 
-	require.NotNil(t, metricFamilyByName(families, "vault_usage_exporter_version"))
-	require.NotNil(t, metricFamilyByName(families, "vault_usage_refresh_success"))
-	require.NotNil(t, metricFamilyByName(families, "vault_usage_refresh_timestamp_seconds"))
-	require.NotNil(t, metricFamilyByName(families, "vault_usage_refresh_duration_seconds"))
-	require.Nil(t, metricFamilyByName(families, "vault_usage_namespaces"))
-	require.Nil(t, metricFamilyByName(families, "vault_usage_auth_method"))
-	require.Nil(t, metricFamilyByName(families, "vault_usage_secret_engine"))
-	require.Nil(t, metricFamilyByName(families, "vault_usage_namespace_clients"))
-	require.Nil(t, metricFamilyByName(families, "vault_usage_mount_clients"))
+	require.NotNil(t, metricFamilyByName(families, "vault_client_count_exporter_version"))
+	require.NotNil(t, metricFamilyByName(families, "vault_client_count_refresh_success"))
+	require.NotNil(t, metricFamilyByName(families, "vault_client_count_refresh_timestamp_seconds"))
+	require.NotNil(t, metricFamilyByName(families, "vault_client_count_refresh_duration_seconds"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_activity_period_info"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_monthly_clients"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_monthly_namespace_clients"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_monthly_mount_clients"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_current_namespace_clients"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_current_mount_clients"))
+}
+
+func TestEmptyNamespaceAttributionStillEmitsTotals(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := &fakeVaultClient{
+		activity: &vault.MonthlyActivityData{
+			StartTime: time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC),
+			EndTime:   time.Date(2026, time.February, 28, 23, 59, 59, 0, time.UTC),
+			Months: []vault.MonthlyActivityMonth{
+				{
+					Timestamp: time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC),
+					Counts: vault.ClientCounts{
+						Clients:          9,
+						EntityClients:    6,
+						NonEntityClients: 3,
+					},
+				},
+			},
+		},
+	}
+
+	c, err := New(
+		WithContext(ctx),
+		WithTimeout(250*time.Millisecond),
+		WithRefreshInterval(time.Hour),
+		WithVaultClient(client),
+	)
+	require.NoError(t, err)
+
+	families := gatherMetricFamilies(t, c)
+	requireMetricValue(t, families, "vault_client_count_activity_period_info", map[string]string{
+		"start_time": "2026-02-01T00:00:00Z",
+		"end_time":   "2026-02-28T23:59:59Z",
+	}, 1)
+	requireMetricAbsent(t, families, "vault_client_count_monthly_clients", map[string]string{
+		"start_time":  "2026-02-01T00:00:00Z",
+		"end_time":    "2026-02-28T23:59:59Z",
+		"month":       "2026-02",
+		"client_type": "clients",
+	})
+	requireMetricValue(t, families, "vault_client_count_monthly_clients", map[string]string{
+		"start_time":  "2026-02-01T00:00:00Z",
+		"end_time":    "2026-02-28T23:59:59Z",
+		"month":       "2026-02",
+		"client_type": "entity_clients",
+	}, 6)
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_monthly_namespace_clients"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_monthly_mount_clients"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_current_namespace_clients"))
+	require.Nil(t, metricFamilyByName(families, "vault_client_count_current_mount_clients"))
 }
 
 func gatherMetricFamilies(t *testing.T, collector prometheus.Collector) []*dto.MetricFamily {
@@ -320,6 +468,21 @@ func requireMetricValue(t *testing.T, families []*dto.MetricFamily, name string,
 	}
 
 	t.Fatalf("metric %s with labels %v not found", name, labels)
+}
+
+func requireMetricAbsent(t *testing.T, families []*dto.MetricFamily, name string, labels map[string]string) {
+	t.Helper()
+
+	family := metricFamilyByName(families, name)
+	if family == nil {
+		return
+	}
+
+	for _, metric := range family.Metric {
+		if metricLabelsMatch(metric, labels) {
+			t.Fatalf("metric %s with labels %v was unexpectedly present", name, labels)
+		}
+	}
 }
 
 func metricLabelsMatch(metric *dto.Metric, want map[string]string) bool {

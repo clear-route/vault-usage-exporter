@@ -9,7 +9,7 @@ cleanup = false
 # Keep mounts unique across repeated runs since cleanup is disabled.
 random_mounts = true
 
-duration = "45s"
+duration = "10s"
 workers = 20
 rps = 0
 log_level = "INFO"

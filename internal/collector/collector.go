@@ -8,17 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clear-route/vault-usage-exporter/pkg/vault"
+	"github.com/clear-route/vault-client-count-exporter/pkg/vault"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const rootNamespace = "root"
 
 type vaultClient interface {
-	ListNamespaces(ctx context.Context) ([]string, error)
-	ListAuthMethods(ctx context.Context, namespace string) ([]vault.Engine, error)
-	ListSecretEngines(ctx context.Context, namespace string) ([]vault.Engine, error)
-	GetMonthlyActivity(ctx context.Context) (*vault.MonthlyActivityData, error)
+	GetActivity(ctx context.Context, query vault.ActivityQuery) (*vault.MonthlyActivityData, error)
 }
 
 var (
@@ -27,9 +24,6 @@ var (
 )
 
 type snapshot struct {
-	namespaces      []string
-	authMethods     []vault.Engine
-	secretEngines   []vault.Engine
 	monthlyActivity *vault.MonthlyActivityData
 }
 
@@ -72,6 +66,12 @@ func WithBuildInfo(version string) Option {
 	}
 }
 
+func WithActivityQuery(query vault.ActivityQuery) Option {
+	return func(c *Collector) {
+		c.activityQuery = query
+	}
+}
+
 type Collector struct {
 	vault   vaultClient
 	rootCtx context.Context
@@ -79,13 +79,15 @@ type Collector struct {
 	timeout         time.Duration
 	refreshInterval time.Duration
 	buildVersion    string
+	activityQuery   vault.ActivityQuery
 
 	buildInfo            *prometheus.Desc
-	namespaceDesc        *prometheus.Desc
-	secretEngineDesc     *prometheus.Desc
-	authMethodDesc       *prometheus.Desc
+	totalClientsDesc     *prometheus.Desc
 	namespaceClientsDesc *prometheus.Desc
 	mountClientsDesc     *prometheus.Desc
+	currentNamespaceDesc *prometheus.Desc
+	currentMountDesc     *prometheus.Desc
+	activityPeriodDesc   *prometheus.Desc
 	refreshSuccessDesc   *prometheus.Desc
 	refreshTimestampDesc *prometheus.Desc
 	refreshDurationDesc  *prometheus.Desc
@@ -100,55 +102,61 @@ func New(opts ...Option) (*Collector, error) {
 		timeout:         5 * time.Second,
 		refreshInterval: 5 * time.Minute,
 		buildInfo: prometheus.NewDesc(
-			"vault_usage_exporter_version",
+			"vault_client_count_exporter_version",
 			"Exporter Version",
 			[]string{"version"},
 			nil,
 		),
-		namespaceDesc: prometheus.NewDesc(
-			"vault_usage_namespaces",
-			"Vault namespaces",
-			[]string{"name"},
-			nil,
-		),
-		secretEngineDesc: prometheus.NewDesc(
-			"vault_usage_secret_engine",
-			"Vault secret engines",
-			[]string{"name", "type", "path", "namespace"},
-			nil,
-		),
-		authMethodDesc: prometheus.NewDesc(
-			"vault_usage_auth_method",
-			"Vault auth methods",
-			[]string{"name", "type", "path", "namespace"},
+		totalClientsDesc: prometheus.NewDesc(
+			"vault_client_count_monthly_clients",
+			"Vault monthly client counts by month",
+			[]string{"start_time", "end_time", "month", "client_type"},
 			nil,
 		),
 		namespaceClientsDesc: prometheus.NewDesc(
-			"vault_usage_namespace_clients",
+			"vault_client_count_monthly_namespace_clients",
 			"Vault monthly client counts attributed to namespaces",
-			[]string{"namespace", "namespace_id", "namespace_path", "client_type"},
+			[]string{"start_time", "end_time", "month", "namespace", "namespace_id", "namespace_path", "client_type"},
 			nil,
 		),
 		mountClientsDesc: prometheus.NewDesc(
-			"vault_usage_mount_clients",
+			"vault_client_count_monthly_mount_clients",
 			"Vault monthly client counts attributed to mounts",
-			[]string{"namespace", "namespace_id", "namespace_path", "mount_path", "mount_type", "client_type"},
+			[]string{"start_time", "end_time", "month", "namespace", "namespace_id", "namespace_path", "mount_path", "mount_type", "client_type"},
+			nil,
+		),
+		currentNamespaceDesc: prometheus.NewDesc(
+			"vault_client_count_current_namespace_clients",
+			"Vault current snapshot client counts attributed to namespaces",
+			[]string{"start_time", "end_time", "namespace", "namespace_id", "namespace_path", "client_type"},
+			nil,
+		),
+		currentMountDesc: prometheus.NewDesc(
+			"vault_client_count_current_mount_clients",
+			"Vault current snapshot client counts attributed to mounts",
+			[]string{"start_time", "end_time", "namespace", "namespace_id", "namespace_path", "mount_path", "mount_type", "client_type"},
+			nil,
+		),
+		activityPeriodDesc: prometheus.NewDesc(
+			"vault_client_count_activity_period_info",
+			"Vault activity period metadata from the activity response",
+			[]string{"start_time", "end_time"},
 			nil,
 		),
 		refreshSuccessDesc: prometheus.NewDesc(
-			"vault_usage_refresh_success",
+			"vault_client_count_refresh_success",
 			"Whether the last refresh succeeded (1) or not (0)",
 			nil,
 			nil,
 		),
 		refreshTimestampDesc: prometheus.NewDesc(
-			"vault_usage_refresh_timestamp_seconds",
+			"vault_client_count_refresh_timestamp_seconds",
 			"Unix timestamp of last refresh attempt",
 			nil,
 			nil,
 		),
 		refreshDurationDesc: prometheus.NewDesc(
-			"vault_usage_refresh_duration_seconds",
+			"vault_client_count_refresh_duration_seconds",
 			"Duration of last refresh attempt in seconds",
 			nil,
 			nil,
@@ -177,11 +185,12 @@ func New(opts ...Option) (*Collector, error) {
 }
 
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.namespaceDesc
-	ch <- c.secretEngineDesc
-	ch <- c.authMethodDesc
+	ch <- c.totalClientsDesc
 	ch <- c.namespaceClientsDesc
 	ch <- c.mountClientsDesc
+	ch <- c.currentNamespaceDesc
+	ch <- c.currentMountDesc
+	ch <- c.activityPeriodDesc
 	ch <- c.refreshSuccessDesc
 	ch <- c.refreshTimestampDesc
 	ch <- c.refreshDurationDesc
@@ -200,39 +209,24 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	for _, namespace := range state.snapshot.namespaces {
-		ch <- prometheus.MustNewConstMetric(c.namespaceDesc, prometheus.GaugeValue, 1, namespace)
-	}
+	ch <- prometheus.MustNewConstMetric(
+		c.activityPeriodDesc,
+		prometheus.GaugeValue,
+		1,
+		formatInfoTime(state.snapshot.monthlyActivity.StartTime),
+		formatInfoTime(state.snapshot.monthlyActivity.EndTime),
+	)
 
-	for _, authMethod := range state.snapshot.authMethods {
-		ch <- prometheus.MustNewConstMetric(
-			c.authMethodDesc,
-			prometheus.GaugeValue,
-			1,
-			authMethod.Name,
-			authMethod.Type,
-			authMethod.Path,
-			authMethod.Namespace,
-		)
-	}
-
-	for _, secretEngine := range state.snapshot.secretEngines {
-		ch <- prometheus.MustNewConstMetric(
-			c.secretEngineDesc,
-			prometheus.GaugeValue,
-			1,
-			secretEngine.Name,
-			secretEngine.Type,
-			secretEngine.Path,
-			secretEngine.Namespace,
-		)
-	}
+	startTimeLabel := formatInfoTime(state.snapshot.monthlyActivity.StartTime)
+	endTimeLabel := formatInfoTime(state.snapshot.monthlyActivity.EndTime)
 
 	for _, namespace := range state.snapshot.monthlyActivity.ByNamespace {
 		emitClientCounts(
 			ch,
-			c.namespaceClientsDesc,
+			c.currentNamespaceDesc,
 			namespace.Counts,
+			startTimeLabel,
+			endTimeLabel,
 			namespaceLabel(namespace.NamespacePath),
 			namespace.NamespaceID,
 			namespace.NamespacePath,
@@ -241,14 +235,51 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		for _, mount := range namespace.Mounts {
 			emitClientCounts(
 				ch,
-				c.mountClientsDesc,
+				c.currentMountDesc,
 				mount.Counts,
+				startTimeLabel,
+				endTimeLabel,
 				namespaceLabel(namespace.NamespacePath),
 				namespace.NamespaceID,
 				namespace.NamespacePath,
 				mount.MountPath,
 				strings.TrimSuffix(mount.MountType, "/"),
 			)
+		}
+	}
+
+	for _, month := range monthlyBuckets(state.snapshot.monthlyActivity, state.timestamp) {
+		monthLabel := formatMonthLabel(month.Timestamp)
+		emitClientCounts(ch, c.totalClientsDesc, month.Counts, startTimeLabel, endTimeLabel, monthLabel)
+
+		for _, namespace := range month.Namespaces {
+			emitClientCounts(
+				ch,
+				c.namespaceClientsDesc,
+				namespace.Counts,
+				startTimeLabel,
+				endTimeLabel,
+				monthLabel,
+				namespaceLabel(namespace.NamespacePath),
+				namespace.NamespaceID,
+				namespace.NamespacePath,
+			)
+
+			for _, mount := range namespace.Mounts {
+				emitClientCounts(
+					ch,
+					c.mountClientsDesc,
+					mount.Counts,
+					startTimeLabel,
+					endTimeLabel,
+					monthLabel,
+					namespaceLabel(namespace.NamespacePath),
+					namespace.NamespaceID,
+					namespace.NamespacePath,
+					mount.MountPath,
+					strings.TrimSuffix(mount.MountType, "/"),
+				)
+			}
 		}
 	}
 }
@@ -300,45 +331,22 @@ func (c *Collector) refresh(parent context.Context) {
 	slog.Debug(
 		"refresh completed",
 		slog.Float64("duration_seconds", nextState.duration.Seconds()),
-		slog.Int("namespaces", len(snapshot.namespaces)),
+		slog.Int("namespaces", len(snapshot.monthlyActivity.ByNamespace)),
+		slog.Bool("monthly", c.activityQuery.Monthly),
+		slog.String("start_time", c.activityQuery.StartTime),
+		slog.String("end_time", c.activityQuery.EndTime),
 	)
 }
 
 func (c *Collector) loadSnapshot(ctx context.Context) (*snapshot, error) {
-	namespaces, err := c.vault.ListNamespaces(ctx)
+	activity, err := c.vault.GetActivity(ctx, c.activityQuery)
 	if err != nil {
-		return nil, fmt.Errorf("list namespaces: %w", err)
-	}
-
-	namespaces = uniqueStrings(append([]string{rootNamespace}, namespaces...))
-
-	authMethods := make([]vault.Engine, 0)
-	secretEngines := make([]vault.Engine, 0)
-
-	for _, namespace := range namespaces {
-		auth, err := c.vault.ListAuthMethods(ctx, namespace)
-		if err != nil {
-			return nil, fmt.Errorf("list auth methods for namespace %q: %w", namespace, err)
-		}
-
-		authMethods = append(authMethods, auth...)
-
-		engines, err := c.vault.ListSecretEngines(ctx, namespace)
-		if err != nil {
-			return nil, fmt.Errorf("list secret engines for namespace %q: %w", namespace, err)
-		}
-
-		secretEngines = append(secretEngines, engines...)
-	}
-
-	activity, err := c.vault.GetMonthlyActivity(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get monthly activity: %w", err)
+		return nil, fmt.Errorf("get activity: %w", err)
 	}
 
 	if len(activity.ByNamespace) == 0 {
 		slog.Info(
-			"vault monthly activity is empty",
+			"vault activity has no namespace attribution yet",
 			slog.Int("clients", activity.Clients),
 			slog.Int("entity_clients", activity.EntityClients),
 			slog.Int("non_entity_clients", activity.NonEntityClients),
@@ -347,12 +355,7 @@ func (c *Collector) loadSnapshot(ctx context.Context) (*snapshot, error) {
 		)
 	}
 
-	return &snapshot{
-		namespaces:      append([]string(nil), namespaces...),
-		authMethods:     authMethods,
-		secretEngines:   secretEngines,
-		monthlyActivity: activity,
-	}, nil
+	return &snapshot{monthlyActivity: activity}, nil
 }
 
 func (c *Collector) getState() refreshState {
@@ -367,7 +370,6 @@ func emitClientCounts(ch chan<- prometheus.Metric, desc *prometheus.Desc, counts
 		name  string
 		value int
 	}{
-		{name: "clients", value: counts.Clients},
 		{name: "entity_clients", value: counts.EntityClients},
 		{name: "non_entity_clients", value: counts.NonEntityClients},
 		{name: "secret_syncs", value: counts.SecretSyncs},
@@ -376,6 +378,33 @@ func emitClientCounts(ch chan<- prometheus.Metric, desc *prometheus.Desc, counts
 		allLabels := append(append([]string(nil), labels...), metric.name)
 		ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(metric.value), allLabels...)
 	}
+}
+
+func monthlyBuckets(activity *vault.MonthlyActivityData, fallbackTimestamp time.Time) []vault.MonthlyActivityMonth {
+	if len(activity.Months) > 0 {
+		return activity.Months
+	}
+
+	timestamp := fallbackTimestamp.UTC()
+	if !activity.EndTime.IsZero() {
+		timestamp = activity.EndTime.UTC()
+	}
+
+	return []vault.MonthlyActivityMonth{
+		{
+			Timestamp:  timestamp,
+			Counts:     activity.ClientCounts,
+			Namespaces: activity.ByNamespace,
+		},
+	}
+}
+
+func formatMonthLabel(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+
+	return t.UTC().Format("2006-01")
 }
 
 func namespaceLabel(namespacePath string) string {
@@ -403,18 +432,10 @@ func unixTimestamp(t time.Time) float64 {
 	return float64(t.Unix())
 }
 
-func uniqueStrings(values []string) []string {
-	seen := make(map[string]struct{}, len(values))
-	out := make([]string, 0, len(values))
-
-	for _, value := range values {
-		if _, ok := seen[value]; ok {
-			continue
-		}
-
-		seen[value] = struct{}{}
-		out = append(out, value)
+func formatInfoTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
 	}
 
-	return out
+	return t.UTC().Format(time.RFC3339)
 }
