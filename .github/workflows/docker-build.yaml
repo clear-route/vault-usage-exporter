@@ -36,5 +36,5 @@ jobs:
           build-args: |
             VERSION=v0.0.1
           tags: |
-            ghcr.io/clear-route/vault-usage-exporter:latest
-            ghcr.io/clear-route/vault-usage-exporter:v0.0.1
+            ghcr.io/clear-route/vault-client-count-exporter:latest
+            ghcr.io/clear-route/vault-client-count-exporter:v0.0.1

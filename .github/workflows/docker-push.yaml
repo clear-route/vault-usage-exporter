@@ -46,5 +46,5 @@ jobs:
           build-args: |
             VERSION=${{ env.VERSION }}
           tags: |
-            ghcr.io/clear-route/vault-usage-exporter:latest
-            ghcr.io/clear-route/vault-usage-exporter:${{ env.VERSION }}
+            ghcr.io/clear-route/vault-client-count-exporter:latest
+            ghcr.io/clear-route/vault-client-count-exporter:${{ env.VERSION }}
