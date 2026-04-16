@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/clear-route/vault-usage-exporter/internal/collector"
-	customHTTP "github.com/clear-route/vault-usage-exporter/pkg/http"
-	"github.com/clear-route/vault-usage-exporter/pkg/vault"
+	"github.com/clear-route/vault-client-count-exporter/internal/collector"
+	customHTTP "github.com/clear-route/vault-client-count-exporter/pkg/http"
+	"github.com/clear-route/vault-client-count-exporter/pkg/vault"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -28,6 +28,9 @@ func main() {
 	address := flag.String("address", "0.0.0.0", "address for metrics HTTP server")
 	timeout := flag.Duration("timeout", 5*time.Second, "timeout for each Vault refresh request")
 	refreshInterval := flag.Duration("refresh-interval", 5*time.Minute, "interval between Vault refreshes")
+	startTime := flag.String("start_time", "", "optional RFC3339 or Unix epoch activity query start time")
+	endTime := flag.String("end_time", "", "optional RFC3339 or Unix epoch activity query end time")
+	monthly := flag.Bool("monthly", false, "use sys/internal/counters/activity/monthly instead of sys/internal/counters/activity")
 
 	flag.Parse()
 
@@ -53,6 +56,11 @@ func main() {
 		collector.WithRefreshInterval(*refreshInterval),
 		collector.WithVaultClient(vaultClient),
 		collector.WithBuildInfo(version),
+		collector.WithActivityQuery(vault.ActivityQuery{
+			StartTime: *startTime,
+			EndTime:   *endTime,
+			Monthly:   *monthly,
+		}),
 	)
 	if err != nil {
 		log.Fatalf("error initializing collector: %v", err)

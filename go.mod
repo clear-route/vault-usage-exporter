@@ -1,4 +1,4 @@
-module github.com/clear-route/vault-usage-exporter
+module github.com/clear-route/vault-client-count-exporter
 
 go 1.24.0
 
